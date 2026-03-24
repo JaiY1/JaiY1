@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NBA Stats Tool</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0a0a0f;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      font-size: 2rem;
+      color: #c8102e;
+      letter-spacing: 2px;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      color: #777;
+      font-size: 0.9rem;
+      margin-bottom: 40px;
+    }
+
+    .card {
+      background: #13131a;
+      border: 1px solid #222;
+      border-radius: 12px;
+      padding: 28px;
+      width: 100%;
+      max-width: 600px;
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      color: #888;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px 14px;
+      background: #1e1e2a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #e0e0e0;
+      font-size: 1rem;
+      margin-bottom: 16px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus {
+      border-color: #c8102e;
+    }
+
+    button {
+      width: 100%;
+      padding: 13px;
+      background: #c8102e;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover { background: #a00d24; }
+    button:disabled { background: #555; cursor: not-allowed; }
+
+    .status {
+      font-size: 0.85rem;
+      color: #aaa;
+      margin-top: 12px;
+      min-height: 20px;
+    }
+
+    .answer-box {
+      background: #1a1a26;
+      border-left: 4px solid #c8102e;
+      border-radius: 8px;
+      padding: 18px;
+      margin-top: 16px;
+      font-size: 1rem;
+      line-height: 1.6;
+      display: none;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .stat-tile {
+      background: #13131a;
+      border: 1px solid #222;
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+    }
+
+    .stat-tile .val {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #c8102e;
+    }
+
+    .stat-tile .lbl {
+      font-size: 0.75rem;
+      color: #777;
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .section-title {
+      font-size: 0.85rem;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 14px;
+    }
+
+    .error { color: #ff6b6b; font-size: 0.9rem; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+  <h1>NBA STATS TOOL</h1>
+  <p class="subtitle">Search a player, then ask anything about their stats.</p>
+
+  <!-- Step 1: Load Player -->
+  <div class="card">
+    <p class="section-title">Step 1 — Load Player</p>
+    <label>Player Name</label>
+    <input type="text" id="playerInput" placeholder="e.g. LeBron James" />
+    <label>Season</label>
+    <select id="seasonSelect">
+      <option value="2024-25">2024-25</option>
+      <option value="2023-24">2023-24</option>
+      <option value="2022-23">2022-23</option>
+    </select>
+    <button id="searchBtn" onclick="loadPlayer()">Load Player Stats</button>
+    <div class="status" id="searchStatus"></div>
+  </div>
+
+  <!-- Step 2: Ask a Question -->
+  <div class="card">
+    <p class="section-title">Step 2 — Ask a Question</p>
+    <label>Question</label>
+    <input type="text" id="questionInput" placeholder="e.g. How often does he score 30 points?" />
+    <button id="askBtn" onclick="askQuestion()" disabled>Ask</button>
+    <div class="error" id="askError"></div>
+    <div class="answer-box" id="answerBox"></div>
+    <div class="stat-grid" id="statGrid"></div>
+  </div>
+
+<script>
+  let currentPlayer = null;
+  let currentSeason = null;
+
+  async function loadPlayer() {
+    const name = document.getElementById("playerInput").value.trim();
+    const season = document.getElementById("seasonSelect").value;
+    const status = document.getElementById("searchStatus");
+    const btn = document.getElementById("searchBtn");
+
+    if (!name) { status.textContent = "Enter a player name."; return; }
+
+    btn.disabled = true;
+    status.textContent = "Fetching stats from NBA.com... (may take a few seconds)";
+
+    try {
+      const res = await fetch("/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ player: name, season })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        status.textContent = "Error: " + data.error;
+      } else {
+        currentPlayer = data.player;
+        currentSeason = season;
+        status.textContent = `Loaded ${data.player} — ${data.games_loaded} games this season.`;
+        document.getElementById("askBtn").disabled = false;
+      }
+    } catch (e) {
+      status.textContent = "Network error. Is the server running?";
+    }
+
+    btn.disabled = false;
+  }
+
+  async function askQuestion() {
+    const question = document.getElementById("questionInput").value.trim();
+    const answerBox = document.getElementById("answerBox");
+    const statGrid = document.getElementById("statGrid");
+    const errEl = document.getElementById("askError");
+    const btn = document.getElementById("askBtn");
+
+    errEl.textContent = "";
+    answerBox.style.display = "none";
+    statGrid.innerHTML = "";
+
+    if (!question) { errEl.textContent = "Enter a question."; return; }
+    if (!currentPlayer) { errEl.textContent = "Load a player first."; return; }
+
+    btn.disabled = true;
+
+    try {
+      const res = await fetch("/api/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ player: currentPlayer, question, season: currentSeason })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        errEl.textContent = data.error;
+      } else {
+        answerBox.textContent = data.answer;
+        answerBox.style.display = "block";
+
+        const s = data.stats;
+        const tiles = [
+          { val: s.average, lbl: "Average" },
+          { val: s.total_games, lbl: "Games" },
+          { val: s.max, lbl: "Season High" },
+          { val: s.min, lbl: "Season Low" },
+        ];
+        if (s.frequency_pct !== undefined) {
+          tiles.push({ val: s.frequency_pct + "%", lbl: `Hit ${s.threshold}+ Threshold` });
+          tiles.push({ val: s.games_above + "/" + s.total_games, lbl: "Games Above" });
+        }
+
+        statGrid.innerHTML = tiles.map(t => `
+          <div class="stat-tile">
+            <div class="val">${t.val}</div>
+            <div class="lbl">${t.lbl}</div>
+          </div>
+        `).join("");
+      }
+    } catch (e) {
+      errEl.textContent = "Network error.";
+    }
+
+    btn.disabled = false;
+  }
+
+  document.getElementById("playerInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") loadPlayer();
+  });
+  document.getElementById("questionInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") askQuestion();
+  });
+</script>
+</body>
+</html>
