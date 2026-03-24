@@ -1,17 +1,13 @@
 ### Hi there 👋
 
-<!--
-**JaiY1/JaiY1** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+I'm **Jai** — a developer in the making, currently grinding through prework and building real projects.
 
-Here are some ideas to get you started:
+- 🔭 Currently working on my prework and first projects
+- 🌱 Learning Git, GitHub, and software engineering fundamentals
+- 👯 Looking to collaborate on beginner-friendly coding projects
+- 💬 Ask me about anything — I'm always up to learn and discuss
+- ⚡ Fun fact: Every expert was once a beginner
 
-- 🔭 I’m currently working on my prework
-- 🌱 I’m currently learning GIT
-- 👯 I’m looking to collaborate on coding
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
-test
+---
+
+*This profile is a work in progress — just like me.* 🚀
