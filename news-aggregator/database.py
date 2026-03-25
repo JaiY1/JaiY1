@@ -1,0 +1,198 @@
+import sqlite3
+import json
+import os
+
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "newsletter.db")
+
+
+def get_conn():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def init_db():
+    conn = get_conn()
+
+    # Users table — one row per subscriber
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone_number TEXT UNIQUE,
+            name TEXT,
+            interests TEXT DEFAULT '[]',
+            sources TEXT DEFAULT '[]',
+            subreddits TEXT DEFAULT '[]',
+            location TEXT,
+            active INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+
+    # Articles table — deduped by URL
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS articles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            url TEXT UNIQUE,
+            title TEXT,
+            source TEXT,
+            category TEXT,
+            excerpt TEXT,
+            summary TEXT,
+            published_at TEXT,
+            scraped_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+
+    # Tracks which articles were included in each user's digest
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS user_digests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            article_id INTEGER,
+            sent_at TEXT DEFAULT (datetime('now')),
+            UNIQUE(user_id, article_id)
+        )
+    """)
+
+    # Cost tracking table
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS api_costs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            service TEXT,
+            operation TEXT,
+            units REAL,
+            cost_usd REAL,
+            logged_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+    print("DB initialized.")
+
+
+# --- User functions ---
+
+def create_user(phone_number: str, name: str = None):
+    conn = get_conn()
+    conn.execute(
+        "INSERT OR IGNORE INTO users (phone_number, name) VALUES (?, ?)",
+        [phone_number, name]
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_user(phone_number: str):
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT * FROM users WHERE phone_number = ?", [phone_number]
+    ).fetchone()
+    conn.close()
+    if not row:
+        return None
+    user = dict(row)
+    user["interests"] = json.loads(user["interests"])
+    user["sources"] = json.loads(user["sources"])
+    user["subreddits"] = json.loads(user["subreddits"])
+    return user
+
+
+def get_all_users():
+    conn = get_conn()
+    rows = conn.execute("SELECT * FROM users WHERE active = 1").fetchall()
+    conn.close()
+    users = []
+    for row in rows:
+        u = dict(row)
+        u["interests"] = json.loads(u["interests"])
+        u["sources"] = json.loads(u["sources"])
+        u["subreddits"] = json.loads(u["subreddits"])
+        users.append(u)
+    return users
+
+
+def update_user(phone_number: str, **kwargs):
+    conn = get_conn()
+    for key, value in kwargs.items():
+        if isinstance(value, list):
+            value = json.dumps(value)
+        conn.execute(
+            f"UPDATE users SET {key} = ? WHERE phone_number = ?",
+            [value, phone_number]
+        )
+    conn.commit()
+    conn.close()
+
+
+# --- Article functions ---
+
+def save_article(article: dict) -> int | None:
+    conn = get_conn()
+    try:
+        cursor = conn.execute("""
+            INSERT OR IGNORE INTO articles
+                (url, title, source, category, excerpt, summary, published_at)
+            VALUES
+                (:url, :title, :source, :category, :excerpt, :summary, :published_at)
+        """, article)
+        conn.commit()
+        article_id = cursor.lastrowid if cursor.lastrowid else None
+    except Exception:
+        article_id = None
+    conn.close()
+    return article_id
+
+
+def get_articles_for_user(user_id: int, interests: list[str], limit: int = 20):
+    conn = get_conn()
+    # Get articles not yet sent to this user, matching their interests
+    placeholders = " OR ".join(["LOWER(category) LIKE ?" for _ in interests])
+    params = [f"%{i.lower()}%" for i in interests] + [user_id, limit]
+    rows = conn.execute(f"""
+        SELECT a.* FROM articles a
+        WHERE ({placeholders})
+        AND a.id NOT IN (
+            SELECT article_id FROM user_digests WHERE user_id = ?
+        )
+        ORDER BY a.scraped_at DESC
+        LIMIT ?
+    """, params).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def mark_articles_sent(user_id: int, article_ids: list[int]):
+    conn = get_conn()
+    conn.executemany(
+        "INSERT OR IGNORE INTO user_digests (user_id, article_id) VALUES (?, ?)",
+        [(user_id, aid) for aid in article_ids]
+    )
+    conn.commit()
+    conn.close()
+
+
+# --- Cost tracking ---
+
+def log_cost(service: str, operation: str, units: float, cost_usd: float):
+    conn = get_conn()
+    conn.execute(
+        "INSERT INTO api_costs (service, operation, units, cost_usd) VALUES (?, ?, ?, ?)",
+        [service, operation, units, cost_usd]
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_cost_summary():
+    conn = get_conn()
+    rows = conn.execute("""
+        SELECT service, SUM(cost_usd) as total,
+               DATE(logged_at) as date
+        FROM api_costs
+        GROUP BY service, DATE(logged_at)
+        ORDER BY date DESC
+    """).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]

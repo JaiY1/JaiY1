@@ -1,0 +1,8 @@
+flask
+anthropic
+feedparser
+requests
+beautifulsoup4
+schedule
+python-dotenv
+praw
