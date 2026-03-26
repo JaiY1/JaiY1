@@ -2,7 +2,7 @@ import feedparser
 import requests
 from bs4 import BeautifulSoup
 from database import save_article
-from config import RSS_FEEDS
+from config import RSS_FEEDS, CATEGORY_KEYWORDS
 from datetime import datetime
 import time
 
@@ -72,10 +72,17 @@ def scrape_all(interests: list[str]) -> list[dict]:
         for cat, urls in matched:
             print(f"  Scraping {cat}...")
             articles = scrape_rss(cat, urls)
+            keywords = CATEGORY_KEYWORDS.get(cat, [])
             for a in articles:
-                if a["url"] and a["url"] not in seen_urls:
-                    seen_urls.add(a["url"])
-                    all_articles.append(a)
+                if not a["url"] or a["url"] in seen_urls:
+                    continue
+                # Apply keyword filter for team/topic-specific categories
+                if keywords:
+                    text = (a["title"] + " " + a.get("excerpt", "")).lower()
+                    if not any(kw.lower() in text for kw in keywords):
+                        continue
+                seen_urls.add(a["url"])
+                all_articles.append(a)
 
     return all_articles
 
