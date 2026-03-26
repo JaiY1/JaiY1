@@ -15,7 +15,7 @@ Endpoints:
   GET  /costs/total               - get total spend this month
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from database import (
     init_db, create_user, get_user, update_user, get_all_users,
     get_articles_for_user, mark_articles_sent, get_cost_summary
@@ -179,6 +179,83 @@ def get_total_costs():
         "month": "current",
         "grand_total_usd": round(overall["grand_total"] or 0, 6),
         "breakdown": [dict(r) for r in rows]
+    })
+
+
+# --- UI routes ---
+
+@app.route("/feed/<phone>")
+def feed_ui(phone):
+    user = get_user(phone)
+    if not user:
+        return "User not found", 404
+    return render_template("feed.html")
+
+
+@app.route("/feed/<phone>/data")
+def feed_data(phone):
+    """JSON endpoint the UI calls to get digest data."""
+    user = get_user(phone)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    interests = user["interests"] or ["world news"]
+
+    # Scrape + save fresh articles
+    articles = scrape_all(interests)
+    save_articles(articles)
+
+    # Fetch top 8 articles per category so no category gets crowded out
+    from database import get_conn as _get_conn
+    _conn = _get_conn()
+    all_articles = []
+    seen_ids = set()
+    for interest in interests:
+        rows = _conn.execute("""
+            SELECT * FROM articles
+            WHERE LOWER(category) LIKE ?
+            ORDER BY scraped_at DESC
+            LIMIT 8
+        """, [f"%{interest.lower()}%"]).fetchall()
+        for r in rows:
+            d = dict(r)
+            if d["id"] not in seen_ids:
+                seen_ids.add(d["id"])
+                all_articles.append(d)
+    _conn.close()
+
+    summarized = summarize_batch(all_articles)
+    briefing = write_morning_briefing(summarized, user.get("name"))
+
+    # Only mark as sent for SMS tracking (not web UI)
+    unsent_ids = [a["id"] for a in get_articles_for_user(user["id"], interests, limit=30) if a.get("id")]
+    if unsent_ids:
+        mark_articles_sent(user["id"], unsent_ids)
+
+    # Get today's cost
+    from database import get_conn
+    conn = get_conn()
+    cost_row = conn.execute(
+        "SELECT SUM(cost_usd) as total FROM api_costs WHERE DATE(logged_at) = DATE('now')"
+    ).fetchone()
+    conn.close()
+    cost_today = (cost_row["total"] or 0.0) if cost_row else 0.0
+
+    return jsonify({
+        "user": user["name"] or phone,
+        "briefing": briefing,
+        "articles": [
+            {
+                "id": a.get("id"),
+                "title": a["title"],
+                "category": a["category"],
+                "summary": a.get("summary"),
+                "url": a["url"],
+                "source": a.get("source", ""),
+            }
+            for a in summarized
+        ],
+        "cost_today": cost_today,
     })
 
 

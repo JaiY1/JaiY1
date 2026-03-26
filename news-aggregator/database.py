@@ -29,6 +29,13 @@ def init_db():
         )
     """)
 
+    # Add image_url column if not exists (migration)
+    try:
+        conn.execute("ALTER TABLE articles ADD COLUMN image_url TEXT")
+        conn.commit()
+    except Exception:
+        pass
+
     # Articles table — deduped by URL
     conn.execute("""
         CREATE TABLE IF NOT EXISTS articles (
@@ -39,6 +46,7 @@ def init_db():
             category TEXT,
             excerpt TEXT,
             summary TEXT,
+            image_url TEXT,
             published_at TEXT,
             scraped_at TEXT DEFAULT (datetime('now'))
         )
@@ -128,15 +136,15 @@ def update_user(phone_number: str, **kwargs):
 
 # --- Article functions ---
 
-def save_article(article: dict) -> int | None:
+def save_article(article: dict):
     conn = get_conn()
     try:
         cursor = conn.execute("""
             INSERT OR IGNORE INTO articles
-                (url, title, source, category, excerpt, summary, published_at)
+                (url, title, source, category, excerpt, summary, image_url, published_at)
             VALUES
-                (:url, :title, :source, :category, :excerpt, :summary, :published_at)
-        """, article)
+                (:url, :title, :source, :category, :excerpt, :summary, :image_url, :published_at)
+        """, {**article, "image_url": article.get("image_url")})
         conn.commit()
         article_id = cursor.lastrowid if cursor.lastrowid else None
     except Exception:

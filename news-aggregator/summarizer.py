@@ -48,42 +48,65 @@ Summary:"""
         return excerpt[:200] + "..." if len(excerpt) > 200 else excerpt
 
 
-def write_morning_briefing(articles: list[dict], user_name: str = None) -> str:
-    """Write a 5-7 sentence AI morning briefing from the day's top articles."""
+def write_morning_briefing(articles: list[dict], user_name: str = None) -> list[dict]:
+    """
+    Write a bullet-point morning briefing. Returns a list of dicts:
+    [{"point": "...", "category": "iran", "keywords": ["iran", "missile"]}]
+    Each bullet is clickable and links to articles in that category.
+    """
     if not articles:
-        return "No news found for your interests today."
+        return [{"point": "No news found for your interests today.", "category": "", "keywords": []}]
 
     headlines = "\n".join([
-        f"- [{a['category'].upper()}] {a['title']}: {a.get('summary') or a.get('excerpt', '')[:150]}"
+        f"- [{a['category'].upper()}] {a['title']}"
         for a in articles[:15]
     ])
 
-    greeting = f"Good morning{' ' + user_name if user_name else ''}!"
-    prompt = f"""You are writing a short morning briefing. In 5-7 sentences, summarize the most important stories from the headlines below. Be conversational, concise, and cover the most impactful stories. Start with "{greeting}".
+    prompt = f"""You are writing a morning briefing as bullet points. Each bullet covers one key story or theme from the headlines below.
+
+Return ONLY a JSON array like this (no extra text):
+[
+  {{"point": "One sentence summary of the story.", "category": "the category name from the headlines", "keywords": ["keyword1", "keyword2"]}},
+  ...
+]
+
+Write 5-7 bullets. Be concise and factual. Use the exact category name from the headlines (e.g. "iran", "ai", "arsenal", "timberwolves").
 
 Headlines:
-{headlines}
-
-Morning briefing:"""
+{headlines}"""
 
     try:
         response = client.messages.create(
             model="claude-haiku-4-5",
-            max_tokens=300,
+            max_tokens=600,
             messages=[{"role": "user", "content": prompt}]
         )
-        briefing = response.content[0].text.strip()
+        import json
+        text = response.content[0].text.strip()
+        # Strip markdown code fences if present
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+        bullets = json.loads(text)
 
         input_tokens = response.usage.input_tokens
         output_tokens = response.usage.output_tokens
         cost = (input_tokens * INPUT_COST_PER_TOKEN) + (output_tokens * OUTPUT_COST_PER_TOKEN)
         log_cost("claude-haiku", "morning_briefing", input_tokens + output_tokens, cost)
 
-        return briefing
+        return bullets
 
     except Exception as e:
         print(f"  Morning briefing failed: {e}")
-        return f"{greeting} Here are today's top stories."
+        # Fallback: one bullet per category
+        seen = set()
+        bullets = []
+        for a in articles[:5]:
+            if a["category"] not in seen:
+                seen.add(a["category"])
+                bullets.append({"point": a["title"], "category": a["category"], "keywords": []})
+        return bullets
 
 
 def summarize_batch(articles: list[dict]) -> list[dict]:

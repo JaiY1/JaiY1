@@ -25,14 +25,27 @@ def scrape_rss(category: str, urls: list[str]) -> list[dict]:
                     except Exception:
                         published = datetime.now().isoformat()
 
+                # Try to extract thumbnail
+                image_url = None
+                if hasattr(entry, "media_thumbnail") and entry.media_thumbnail:
+                    image_url = entry.media_thumbnail[0].get("url")
+                elif hasattr(entry, "media_content") and entry.media_content:
+                    image_url = entry.media_content[0].get("url")
+                elif hasattr(entry, "enclosures") and entry.enclosures:
+                    for enc in entry.enclosures:
+                        if enc.get("type", "").startswith("image"):
+                            image_url = enc.get("url")
+                            break
+
                 articles.append({
                     "url": entry.get("link", ""),
                     "title": entry.get("title", ""),
                     "source": feed.feed.get("title", url),
                     "category": category,
                     "excerpt": excerpt,
-                    "summary": None,  # filled in by summarizer
+                    "summary": None,
                     "published_at": published,
+                    "image_url": image_url,
                 })
             time.sleep(0.3)  # be polite to servers
         except Exception as e:

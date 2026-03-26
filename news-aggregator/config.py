@@ -14,31 +14,51 @@ REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET")
 RSS_FEEDS = {
     "world news": [
         "http://feeds.bbci.co.uk/news/rss.xml",
-        "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",
         "https://feeds.reuters.com/reuters/topNews",
-    ],
-    "sports": [
-        "https://www.espn.com/espn/rss/news",
-        "https://bleacherreport.com/articles/feed",
-        "https://sportsnaut.com/feed/",
     ],
     "nba": [
         "https://www.espn.com/espn/rss/nba/news",
         "https://bleacherreport.com/nba/feed",
     ],
-    "nfl": [
-        "https://www.espn.com/espn/rss/nfl/news",
-        "https://bleacherreport.com/nfl/feed",
+    "timberwolves": [
+        "https://www.espn.com/espn/rss/nba/news",
+        "https://bleacherreport.com/nba/feed",
+        "https://www.nba.com/timberwolves/rss.xml",
     ],
-    "finance": [
-        "https://feeds.marketwatch.com/marketwatch/topstories/",
-        "https://www.cnbc.com/id/100003114/device/rss/rss.html",
-        "https://feeds.bloomberg.com/markets/news.rss",
+    "arsenal": [
+        "https://feeds.bbci.co.uk/sport/football/rss.xml",
+        "https://www.theguardian.com/football/arsenal/rss",
+        "https://www.espn.com/espn/rss/soccer/news",
+    ],
+    "soccer": [
+        "https://feeds.bbci.co.uk/sport/football/rss.xml",
+        "https://www.theguardian.com/football/rss",
+        "https://www.espn.com/espn/rss/soccer/news",
+    ],
+    "ai": [
+        "https://techcrunch.com/category/artificial-intelligence/feed/",
+        "https://www.theverge.com/ai-artificial-intelligence/rss/index.xml",
+        "https://feeds.feedburner.com/aiweekly",
+        "https://www.wired.com/feed/tag/artificial-intelligence/rss",
     ],
     "tech": [
         "https://techcrunch.com/feed/",
         "https://www.theverge.com/rss/index.xml",
         "https://www.wired.com/feed/rss",
+    ],
+    "iran": [
+        "https://www.aljazeera.com/xml/rss/all.xml",
+        "https://feeds.bbci.co.uk/news/world/middle_east/rss.xml",
+        "https://feeds.reuters.com/reuters/worldNews",
+    ],
+    "middle east": [
+        "https://www.aljazeera.com/xml/rss/all.xml",
+        "https://feeds.bbci.co.uk/news/world/middle_east/rss.xml",
+        "https://feeds.reuters.com/reuters/worldNews",
+    ],
+    "finance": [
+        "https://feeds.marketwatch.com/marketwatch/topstories/",
+        "https://www.cnbc.com/id/100003114/device/rss/rss.html",
     ],
     "politics": [
         "https://feeds.npr.org/1001/rss.xml",

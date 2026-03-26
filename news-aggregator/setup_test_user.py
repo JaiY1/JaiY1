@@ -11,8 +11,8 @@ init_db()
 phone = "test_user"
 create_user(phone, name="Jai")
 update_user(phone,
-    interests=["nba", "sports", "finance"],
-    subreddits=["nba", "investing", "worldnews"],
+    interests=["timberwolves", "arsenal", "ai", "iran", "middle east"],
+    subreddits=["timberwolves", "gunners", "artificial", "worldnews"],
 )
 
 user = get_user(phone)
