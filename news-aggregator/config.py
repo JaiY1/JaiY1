@@ -72,6 +72,10 @@ RSS_FEEDS = {
         "https://www.theguardian.com/world/middleeast/rss",
         "https://feeds.npr.org/1004/rss.xml",
         "https://www.ft.com/world/mideast?format=rss",
+        "http://rss.cnn.com/rss/cnn_world.rss",
+        "https://moxie.foxnews.com/google-publisher/world.xml",
+        "https://abcnews.go.com/abcnews/internationalheadlines",
+        "https://feeds.nbcnews.com/nbcnews/public/world",
     ],
     "middle east": [
         "https://www.aljazeera.com/xml/rss/all.xml",
