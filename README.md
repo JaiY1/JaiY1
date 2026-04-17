@@ -1,13 +1,10 @@
 ### Hi there 👋
 
-I'm **Jai** — a developer in the making, currently grinding through prework and building real projects.
+I'm **Jai** — a developer in the making, currently building real projects.
 
-- 🔭 Currently working on my prework and first projects
-- 🌱 Learning Git, GitHub, and software engineering fundamentals
-- 👯 Looking to collaborate on beginner-friendly coding projects
-- 💬 Ask me about anything — I'm always up to learn and discuss
-- ⚡ Fun fact: Every expert was once a beginner
+- I am currently working on a new-aggregator service
+- Another project that I have made is a nba-tool that compares nba stats and determines averages using a variety of different conditions.
 
 ---
 
-*This profile is a work in progress — just like me.* 🚀
+*This profile is a work in progress
